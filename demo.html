@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>转盘组件 Demo</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      color: #eee;
+      overflow-x: hidden;
+    }
+
+    .wrap {
+      max-width: 420px;
+      margin: 0 auto;
+      padding: 20px 16px 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    h1 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #ffd369;
+      text-align: center;
+      letter-spacing: 2px;
+      margin-top: 10px;
+    }
+
+    .wheel-box {
+      position: relative;
+      width: 340px;
+      height: 340px;
+      margin-top: 10px;
+    }
+
+    .wheel-box canvas {
+      display: block;
+      width: 320px;
+      height: 320px;
+      margin: 0 auto;
+      border-radius: 50%;
+      box-shadow: 0 0 0 6px rgba(255, 255, 255, 0.08),
+                  0 0 40px rgba(255, 211, 105, 0.15);
+    }
+
+    .tip {
+      font-size: 13px;
+      color: #aaa;
+      text-align: center;
+      min-height: 20px;
+    }
+
+    .result-card {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 211, 105, 0.3);
+      border-radius: 12px;
+      padding: 14px 18px;
+      width: 100%;
+      text-align: center;
+      min-height: 60px;
+    }
+    .result-card .label {
+      font-size: 12px;
+      color: #ffd369;
+      margin-bottom: 6px;
+    }
+    .result-card .value {
+      font-size: 18px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 12px 28px;
+      font-size: 15px;
+      font-weight: 600;
+      border: none;
+      border-radius: 30px;
+      cursor: pointer;
+      transition: transform 0.1s, box-shadow 0.2s, opacity 0.2s;
+      user-select: none;
+    }
+    .btn:active { transform: scale(0.96); }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #ffd369, #ff9a3c);
+      color: #1a1a2e;
+      box-shadow: 0 4px 16px rgba(255, 154, 60, 0.4);
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.12);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .config-section {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 12px;
+      padding: 14px;
+    }
+    .config-section h3 {
+      font-size: 14px;
+      color: #ffd369;
+      margin-bottom: 10px;
+    }
+    .preset-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .preset-btn {
+      padding: 6px 12px;
+      font-size: 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      background: transparent;
+      color: #ddd;
+      cursor: pointer;
+    }
+    .preset-btn.active {
+      background: rgba(255, 211, 105, 0.2);
+      border-color: #ffd369;
+      color: #ffd369;
+    }
+
+    .sectors-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .sectors-table th, .sectors-table td {
+      padding: 6px 4px;
+      text-align: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .sectors-table th {
+      color: #ffd369;
+      font-weight: 500;
+    }
+    .sectors-table input {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+      color: #fff;
+      padding: 4px 6px;
+      font-size: 12px;
+    }
+    .sectors-table .color-cell input[type=color] {
+      padding: 0;
+      height: 26px;
+      border: none;
+      background: transparent;
+    }
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+      font-size: 12px;
+    }
+    .total-row .ok { color: #4ecdc4; }
+    .total-row .err { color: #ff6b6b; }
+
+    .footer-info {
+      font-size: 11px;
+      color: #555;
+      margin-top: 20px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<div class="wrap">
+  <h1>🎡 转盘组件 Demo</h1>
+
+  <div class="wheel-box">
+    <canvas id="wheelCanvas" width="320" height="320"></canvas>
+  </div>
+
+  <div class="result-card">
+    <div class="label">选中结果</div>
+    <div class="value" id="resultText">等待转动...</div>
+  </div>
+
+  <div class="btn-row" style="align-items:center">
+    <button class="btn btn-primary" id="spinBtn">🎲 随机旋转</button>
+    <select id="targetSelect" style="padding:6px 10px;border-radius:20px;background:rgba(255,255,255,0.1);color:#fff;border:1px solid rgba(255,255,255,0.2);font-size:13px">
+    </select>
+    <button class="btn btn-secondary" id="spinIndexBtn" style="padding:10px 18px;font-size:13px">🎯 命中指定</button>
+  </div>
+
+  <div class="config-section">
+    <h3>📊 预设数据</h3>
+    <div class="preset-row" id="presetRow"></div>
+  </div>
+
+  <div class="config-section">
+    <h3>✏️ 扇区编辑（角度总和必须 = 360°）</h3>
+    <table class="sectors-table">
+      <thead>
+        <tr>
+          <th>文字</th>
+          <th style="width:50px">角度</th>
+          <th style="width:40px">颜色</th>
+          <th style="width:30px"></th>
+        </tr>
+      </thead>
+      <tbody id="sectorsBody"></tbody>
+    </table>
+    <div class="total-row">
+      <span>角度总和：<b id="totalAngle">0</b>°</span>
+      <button class="preset-btn" id="addSectorBtn">+ 添加扇区</button>
+    </div>
+    <div id="angleCheck" style="margin-top:6px;font-size:12px"></div>
+    <div style="margin-top:10px">
+      <button class="btn btn-secondary" id="applyBtn" style="padding:8px 20px;font-size:13px">应用到转盘</button>
+    </div>
+  </div>
+
+  <div class="footer-info">
+    Canvas 不等分转盘 · 加速-匀速-阻尼减速动画
+  </div>
+</div>
+
+<script src="js/core/Config.js"></script>
+<script src="js/core/Utils.js"></script>
+<script src="js/core/Storage.js"></script>
+<script src="js/components/Wheel.js"></script>
+
+<script>
+  const PRESETS = {
+    castle: {
+      name: '古堡故事',
+      sectors: [
+        { text: '推开大门', angle: 120, color: '#FF6B6B' },
+        { text: '绕到后方', angle: 120, color: '#4ECDC4' },
+        { text: '转身离开', angle: 120, color: '#FFE66D' },
+      ],
+    },
+    unequal: {
+      name: '不等分 4 扇区',
+      sectors: [
+        { text: '小选项 A', angle: 30,  color: '#FF6B6B' },
+        { text: '大选项 B', angle: 180, color: '#4ECDC4' },
+        { text: '中选项 C', angle: 100, color: '#FFE66D' },
+        { text: '小选项 D', angle: 50,  color: '#AA96DA' },
+      ],
+    },
+    eight: {
+      name: '8 等分',
+      sectors: [
+        { text: 'A', angle: 45, color: '#FF6B6B' },
+        { text: 'B', angle: 45, color: '#4ECDC4' },
+        { text: 'C', angle: 45, color: '#FFE66D' },
+        { text: 'D', angle: 45, color: '#95E1D3' },
+        { text: 'E', angle: 45, color: '#F38181' },
+        { text: 'F', angle: 45, color: '#AA96DA' },
+        { text: 'G', angle: 45, color: '#FCBAD3' },
+        { text: 'H', angle: 45, color: '#A8D8EA' },
+      ],
+    },
+    extreme: {
+      name: '极端不等分',
+      sectors: [
+        { text: '1%',   angle: 3.6,  color: '#FF6B6B' },
+        { text: '99%',  angle: 356.4, color: '#4ECDC4' },
+      ],
+    },
+  };
+
+  let currentPreset = 'castle';
+  let wheel = null;
+  let editingSectors = [];
+  let manualTargetIndex = 0;
+
+  function init() {
+    editingSectors = Utils.deepClone(PRESETS[currentPreset].sectors);
+    renderPresetButtons();
+    renderSectorsTable();
+    updateTargetSelect();
+    initWheel();
+    bindEvents();
+  }
+
+  function renderPresetButtons() {
+    const row = document.getElementById('presetRow');
+    row.innerHTML = '';
+    for (const key in PRESETS) {
+      const btn = document.createElement('button');
+      btn.className = 'preset-btn' + (key === currentPreset ? ' active' : '');
+      btn.textContent = PRESETS[key].name;
+      btn.onclick = () => {
+        currentPreset = key;
+        editingSectors = Utils.deepClone(PRESETS[key].sectors);
+        renderPresetButtons();
+        renderSectorsTable();
+        updateTargetSelect();
+        wheel.updateSectors(editingSectors);
+      };
+      row.appendChild(btn);
+    }
+  }
+
+  function renderSectorsTable() {
+    const tbody = document.getElementById('sectorsBody');
+    tbody.innerHTML = '';
+    editingSectors.forEach((s, i) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input type="text" data-field="text" data-index="${i}" value="${s.text || ''}" /></td>
+        <td><input type="number" data-field="angle" data-index="${i}" value="${s.angle}" step="0.1" min="0" /></td>
+        <td class="color-cell"><input type="color" data-field="color" data-index="${i}" value="${s.color || '#FF6B6B'}" /></td>
+        <td><button class="preset-btn" data-remove="${i}" style="color:#ff6b6b;border-color:#ff6b6b">✕</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+    updateTotalDisplay();
+    tbody.querySelectorAll('input').forEach(inp => {
+      inp.addEventListener('input', onSectorInput);
+    });
+    tbody.querySelectorAll('[data-remove]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = Number(btn.dataset.remove);
+        if (editingSectors.length <= 2) {
+          alert('至少保留 2 个扇区');
+          return;
+        }
+        editingSectors.splice(idx, 1);
+        renderSectorsTable();
+      });
+    });
+  }
+
+  function onSectorInput(e) {
+    const idx = Number(e.target.dataset.index);
+    const field = e.target.dataset.field;
+    editingSectors[idx][field] = field === 'angle' ? Number(e.target.value) || 0 : e.target.value;
+    updateTotalDisplay();
+  }
+
+  function updateTotalDisplay() {
+    const sum = editingSectors.reduce((a, s) => a + (Number(s.angle) || 0), 0);
+    document.getElementById('totalAngle').textContent = sum.toFixed(2);
+    const check = document.getElementById('angleCheck');
+    if (Utils.validateTotalAngle(editingSectors)) {
+      check.innerHTML = '<span class="ok">✓ 角度总和校验通过 (360°)</span>';
+    } else {
+      const diff = (360 - sum).toFixed(2);
+      check.innerHTML = `<span class="err">✗ 角度总和 ${sum.toFixed(2)}°，与 360° 相差 ${diff}°</span>`;
+    }
+  }
+
+  function initWheel() {
+    const canvas = document.getElementById('wheelCanvas');
+    wheel = new Wheel(canvas, {
+      sectors: editingSectors,
+      size: 320,
+      minRounds: 5,
+      duration: 4500,
+    });
+  }
+
+  function bindEvents() {
+    document.getElementById('spinBtn').onclick = () => {
+      if (wheel.isSpinning()) return;
+      setButtonsDisabled(true);
+      document.getElementById('resultText').textContent = '旋转中...';
+      wheel.startSpin(null, (sector, idx, err) => {
+        setButtonsDisabled(false);
+        if (err) {
+          document.getElementById('resultText').textContent = err.busy ? '转盘正在旋转，请稍候' : '无扇区数据';
+          return;
+        }
+        document.getElementById('resultText').textContent = `🎈 选中：${sector.text} (扇区 ${idx})`;
+      });
+    };
+
+    document.getElementById('spinIndexBtn').onclick = () => {
+      if (wheel.isSpinning()) return;
+      const sel = document.getElementById('targetSelect');
+      const targetIdx = Number(sel.value);
+      setButtonsDisabled(true);
+      document.getElementById('resultText').textContent = `命中测试：目标扇区 ${targetIdx}...`;
+      wheel.startSpin(targetIdx, (sector, idx, err) => {
+        setButtonsDisabled(false);
+        if (err) return;
+        if (idx === targetIdx) {
+          document.getElementById('resultText').textContent = `✅ 精准命中：${sector.text} (扇区 ${idx})`;
+        } else {
+          document.getElementById('resultText').textContent = `⚠️ 偏移：${sector.text} (扇区 ${idx})，目标 ${targetIdx}`;
+        }
+      });
+    };
+
+    document.getElementById('applyBtn').onclick = () => {
+      if (!Utils.validateTotalAngle(editingSectors)) {
+        if (!confirm('当前角度总和不等于 360°，是否自动归一化？')) return;
+        Utils.normalizeAngle(editingSectors);
+        renderSectorsTable();
+      }
+      wheel.updateSectors(editingSectors);
+      updateTargetSelect();
+    };
+
+    document.getElementById('addSectorBtn').onclick = () => {
+      editingSectors.push({
+        text: '新扇区',
+        angle: 30,
+        color: CONFIG.WHEEL.DEFAULT_COLORS[editingSectors.length % CONFIG.WHEEL.DEFAULT_COLORS.length],
+      });
+      renderSectorsTable();
+      updateTargetSelect();
+    };
+  }
+
+  function setButtonsDisabled(disabled) {
+    document.getElementById('spinBtn').disabled = disabled;
+    document.getElementById('spinIndexBtn').disabled = disabled;
+  }
+
+  function updateTargetSelect() {
+    const sel = document.getElementById('targetSelect');
+    const prevValue = sel.value;
+    sel.innerHTML = '';
+    editingSectors.forEach((s, i) => {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = `[${i}] ${s.text} (${s.angle}°)`;
+      sel.appendChild(opt);
+    });
+    if (prevValue !== '' && prevValue < editingSectors.length) {
+      sel.value = prevValue;
+    } else {
+      sel.value = 0;
+    }
+  }
+
+  init();
+</script>
+
+</body>
+</html>

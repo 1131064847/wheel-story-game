@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>转盘故事 · 入口</title>
+  <script src="js/core/Config.js"></script>
+  <script src="js/core/Storage.js"></script>
+  <script>
+    (function () {
+      try {
+        const s = Storage.get(CONFIG.STORAGE_KEYS.ADMIN_SESSION);
+        if (s && s.loggedIn) {
+          location.replace('admin-dashboard.html');
+          return;
+        }
+      } catch (e) {}
+      location.replace('play.html');
+    })();
+  </script>
+</head>
+<body>
+</body>
+</html>

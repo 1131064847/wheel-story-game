@@ -1,0 +1,6 @@
+.git/
+*.log
+_tunnel.py
+cloudflared.exe
+*.json
+!package.json

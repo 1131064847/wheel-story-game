@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="format-detection" content="telephone=no" />
+  <title>管理员登录 · 转盘故事</title>
+  <link rel="stylesheet" href="css/admin.css" />
+</head>
+<body class="login-body">
+
+<div class="login-card">
+  <div class="login-logo">
+    <div class="login-logo-icon">⚙</div>
+    <h1>ADMIN CONSOLE</h1>
+    <p>故事节点管理后台</p>
+  </div>
+
+  <form id="loginForm" autocomplete="off">
+    <div class="login-field">
+      <label>管理员账号</label>
+      <input type="text" id="username" placeholder="请输入账号" value="admin" autocomplete="off" />
+    </div>
+    <div class="login-field">
+      <label>密码</label>
+      <input type="password" id="password" placeholder="请输入密码" value="123456" autocomplete="off" />
+    </div>
+    <div class="login-error" id="loginError"></div>
+    <button type="submit" class="login-btn" id="loginBtn">登 录</button>
+  </form>
+
+  <div class="login-foot">
+    <a href="play.html">← 返回玩家视角</a>
+  </div>
+</div>
+
+<script src="js/core/Config.js"></script>
+<script src="js/core/Storage.js"></script>
+<script src="js/admin/Auth.js"></script>
+<script>
+  (function () {
+    if (Auth.check()) {
+      location.replace('admin-dashboard.html');
+      return;
+    }
+
+    const form = document.getElementById('loginForm');
+    const errEl = document.getElementById('loginError');
+    const btn = document.getElementById('loginBtn');
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      const u = document.getElementById('username').value.trim();
+      const p = document.getElementById('password').value;
+      btn.disabled = true;
+      errEl.textContent = '';
+
+      setTimeout(function () {
+        const r = Auth.login(u, p);
+        btn.disabled = false;
+        if (r.ok) {
+          location.replace('admin-dashboard.html');
+        } else {
+          errEl.textContent = r.message;
+        }
+      }, 200);
+    });
+  })();
+</script>
+
+</body>
+</html>

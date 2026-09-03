@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="format-detection" content="telephone=no,email=no,address=no" />
+  <meta name="theme-color" content="#1a1428" />
+  <title>古堡迷踪 · 转盘故事</title>
+  <link rel="stylesheet" href="css/play.css" />
+</head>
+<body>
+
+<div class="page" id="app">
+
+  <div class="nav-bar">
+    <div class="nav-title">STORY · WHEEL</div>
+    <button class="nav-restart" id="restartBtn">↻ 重新开始</button>
+  </div>
+
+  <div class="story-card" id="storyCard">
+    <div class="story-title" id="storyTitle">加载中...</div>
+    <div class="story-content" id="storyContent">请稍候，故事即将展开...</div>
+  </div>
+
+  <div class="wheel-section" id="wheelSection">
+    <div class="wheel-wrap">
+      <canvas id="wheelCanvas" width="320" height="320"></canvas>
+    </div>
+    <div class="selection-toast" id="selectionToast"></div>
+    <div class="spin-btn-wrap">
+      <button class="spin-btn" id="spinBtn">转 动</button>
+    </div>
+  </div>
+
+  <div class="ending-btn-wrap" id="endingBtnWrap" style="display:none">
+    <button class="ending-btn" id="endingRestartBtn">↻ 重新开始冒险</button>
+  </div>
+
+  <div class="node-path" id="nodePath"></div>
+
+</div>
+
+<script src="js/core/Config.js"></script>
+<script src="js/core/Utils.js"></script>
+<script src="js/core/Storage.js"></script>
+<script src="js/components/Wheel.js"></script>
+<script src="js/engine/StoryEngine.js"></script>
+<script src="js/play/PlayApp.js"></script>
+
+</body>
+</html>
