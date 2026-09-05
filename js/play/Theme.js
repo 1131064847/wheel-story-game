@@ -15,6 +15,7 @@
       this.apply('dark');
       this.bind();
       this.syncHandleHeight();
+      this.initHandleDrag();
     },
 
     /** 把手高度与抽屉内容高度一致（两者均垂直居中，等高即完全对齐） */
