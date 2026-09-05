@@ -114,6 +114,22 @@
     if (els.historyList) els.historyList.innerHTML = '';
   }
 
+  /**
+   * 选择衔接段：转盘结果锁定后，以"我+选择内容"记录本次抉择，
+   * 作为两个幕之间的过渡（逆天改命覆盖重选时仅记录最终结果）
+   */
+  function addHistoryChoice(sector) {
+    if (!sector || !sector.text || !els.historyList) return;
+
+    const para = document.createElement('p');
+    para.className = 'history-choice';
+    para.textContent = '我' + sector.text;
+    els.historyList.appendChild(para);
+
+    // 自动滚动到底部
+    els.historyList.scrollTop = els.historyList.scrollHeight;
+  }
+
   function onHistoryToggle() {
     const isOpen = els.historyList.style.display !== 'none';
     els.historyList.style.display = isOpen ? 'none' : 'block';
@@ -261,6 +277,9 @@
       showNoTarget(sector.text);
       return;
     }
+
+    // 记录选择衔接段："我+选择内容"，作为两幕之间的过渡
+    addHistoryChoice(sector);
 
     const next = engine.jumpTo(sector.targetNodeId);
     if (!next) {

@@ -150,54 +150,102 @@
     const sectorAngle = sectorLayout.angle;
     if (sectorAngle < 8) return;
 
-    const midRad = Utils.degToRad(sectorLayout.center - DEG_90);
+    // 翻转/换行所需的几何量：扇区局部中线角 + 转盘当前旋转角
+    const localMidRad = Utils.degToRad(sectorLayout.center - DEG_90);
     const textRadius = radius * 0.62;
 
     const light = Utils.isLightColor(sectorLayout.data.color);
     ctx.fillStyle = light ? '#333333' : '#ffffff';
 
+    // 可用行宽：受径向长度与扇区弦宽双重约束，防止文字越出扇区边界
+    const chordWidth = 2 * textRadius * Math.sin(Math.min(sectorAngle, 180) * Math.PI / 360);
+    const maxTextWidth = Math.min(radius * 0.52, chordWidth * 0.72);
+    // 可用块高：中心轴到外环之间的径向带状区域
+    const maxBlockHeight = radius * 0.5;
+
     let fontSize = 14;
     if (sectorAngle < 20) fontSize = 11;
     if (sectorAngle < 12) fontSize = 9;
+    const minFontSize = sectorAngle < 20 ? 8 : 10;
 
-    ctx.font = `bold ${fontSize}px sans-serif`;
+    // 自适应收缩：块高超限或行宽越界时逐级缩小字号，保证长文案可读
+    let lines = [String(text)];
+    for (;;) {
+      ctx.font = 'bold ' + fontSize + 'px sans-serif';
+      lines = this._wrapSectorText(text, ctx, maxTextWidth);
+      const blockHeight = lines.length * (fontSize + 2);
+      let widest = 0;
+      for (let i = 0; i < lines.length; i++) {
+        widest = Math.max(widest, ctx.measureText(lines[i]).width);
+      }
+      if ((blockHeight <= maxBlockHeight && widest <= maxTextWidth) || fontSize <= minFontSize) break;
+      fontSize -= 1;
+    }
+
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    const maxTextWidth = radius * 0.45;
-    const words = String(text).split('');
-    let line = '';
-    const lines = [];
+    const x = center + Math.cos(localMidRad) * textRadius;
+    const y = center + Math.sin(localMidRad) * textRadius;
+    let rot = localMidRad;
 
-    for (let i = 0; i < words.length; i++) {
-      const test = line + words[i];
-      if (ctx.measureText(test).width > maxTextWidth && line) {
-        lines.push(line);
-        line = words[i];
+    // 倒置判定看"文字最终屏幕角"：文字角落在 (90°,270°) 区间即字头朝下，
+    // 需翻转 π。若按扇区所在半区判断，转盘旋转后会出现上半圆文字倒置。
+    const TWO_PI = Math.PI * 2;
+    let textScreenRad = rot + Utils.degToRad(this._rotation || 0);
+    textScreenRad = ((textScreenRad % TWO_PI) + TWO_PI) % TWO_PI;
+    if (textScreenRad > Math.PI / 2 && textScreenRad < Math.PI * 3 / 2) {
+      rot += Math.PI;
+    }
+
+    const lineHeight = fontSize + 2;
+    const totalLines = lines.length;
+
+    // 各行在旋转后的局部坐标系内堆叠：行序与文字阅读方向一致（修复上下行颠倒）
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(rot);
+    for (let i = 0; i < totalLines; i++) {
+      ctx.fillText(lines[i], 0, (i - (totalLines - 1) / 2) * lineHeight);
+    }
+    ctx.restore();
+  };
+
+  /**
+   * 扇区文字换行：先贪心求最少行数，再按行数均匀分配字符，
+   * 避免贪心换行产生的末行孤字与行宽悬殊
+   */
+  Wheel.prototype._wrapSectorText = function (text, ctx, maxWidth) {
+    const str = String(text);
+    if (ctx.measureText(str).width <= maxWidth) return [str];
+
+    const chars = str.split('');
+    const greedy = [];
+    let line = '';
+    for (let i = 0; i < chars.length; i++) {
+      const test = line + chars[i];
+      if (ctx.measureText(test).width > maxWidth && line) {
+        greedy.push(line);
+        line = chars[i];
       } else {
         line = test;
       }
     }
-    if (line) lines.push(line);
+    if (line) greedy.push(line);
 
-    const totalLines = lines.length;
-    const lineHeight = fontSize + 2;
-
-    for (let i = 0; i < totalLines; i++) {
-      const offsetY = (i - (totalLines - 1) / 2) * lineHeight;
-      const x = center + Math.cos(midRad) * textRadius;
-      const y = center + Math.sin(midRad) * textRadius + offsetY;
-
-      ctx.save();
-      ctx.translate(x, y);
-      let rot = midRad;
-      if (Math.sin(midRad) > 0) {
-        rot += Math.PI;
-      }
-      ctx.rotate(rot);
-      ctx.fillText(lines[i], 0, 0);
-      ctx.restore();
+    const total = chars.length;
+    const n = greedy.length;
+    const base = Math.floor(total / n);
+    let extra = total % n;
+    const lines = [];
+    let idx = 0;
+    for (let i = 0; i < n; i++) {
+      const len = base + (extra > 0 ? 1 : 0);
+      if (extra > 0) extra--;
+      lines.push(chars.slice(idx, idx + len).join(''));
+      idx += len;
     }
+    return lines;
   };
 
   Wheel.prototype._drawSectorBorders = function (layout, center, radius) {
