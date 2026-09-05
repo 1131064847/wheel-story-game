@@ -647,34 +647,7 @@ body {
   background: transparent;
 }
 
-/* ============ 管理员入口（右下角小圆点） ============ */
-
-.admin-fab {
-  position: fixed;
-  right: 14px;
-  bottom: calc(14px + env(safe-area-inset-bottom));
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: 1px solid var(--fab-border);
-  background: var(--fab-bg);
-  color: var(--fab-text);
-  font-size: 18px;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 60;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
-  transition: transform 0.15s, background 0.35s;
-  padding: 0;
-  font-family: inherit;
-  touch-action: manipulation;
-}
-.admin-fab:active { transform: scale(0.9) rotate(30deg); }
-
-/* ============ 管理员登录弹窗 ============ */
+/* ============ 弹窗（逆天改命等通用样式） ============ */
 
 .modal-mask {
   position: fixed;
@@ -771,96 +744,12 @@ body {
   color: var(--text-accent);
 }
 
-.modal-btn-confirm {
-  background: var(--btn-solid-bg);
-  color: var(--btn-solid-text);
-  box-shadow: var(--btn-solid-shadow);
-}
-.modal-btn-confirm:disabled { opacity: 0.5; cursor: not-allowed; }
-
 /* 逆天改命副标题（显示回退目标节点） */
 .fate-subtitle {
   font-size: 12px;
   color: var(--text-hint);
   text-align: center;
   margin: -8px 0 10px;
-}
-
-/* ---- 管理员登录弹窗（重新设计） ---- */
-
-.login-card {
-  position: relative;
-  text-align: center;
-  padding-top: 26px;
-}
-
-.modal-close {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  border: 1px solid var(--chip-border);
-  background: transparent;
-  color: var(--text-accent);
-  font-size: 13px;
-  line-height: 1;
-  cursor: pointer;
-  transition: transform 0.15s, background 0.15s;
-  padding: 0;
-  font-family: inherit;
-  touch-action: manipulation;
-}
-.modal-close:active { transform: scale(0.9); background: var(--chip-bg); }
-
-.login-logo {
-  width: 56px;
-  height: 56px;
-  margin: 0 auto 12px;
-  border-radius: 18px;
-  background: var(--btn-solid-bg);
-  color: var(--btn-solid-text);
-  font-size: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: var(--btn-solid-shadow), inset 0 1px 2px rgba(255, 255, 255, 0.4);
-}
-
-.modal-subtitle {
-  font-size: 11px;
-  color: var(--text-hint);
-  letter-spacing: 2px;
-  margin: -4px 0 16px;
-}
-
-.login-field {
-  position: relative;
-  margin-bottom: 12px;
-}
-
-.login-field-icon {
-  position: absolute;
-  left: 13px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 14px;
-  pointer-events: none;
-  opacity: 0.75;
-}
-
-.login-input {
-  height: 46px;
-  padding-left: 40px !important;
-  text-align: left;
-}
-
-.login-btn {
-  width: 100%;
-  height: 46px;
-  margin-top: 4px;
-  letter-spacing: 2px;
 }
 
 /* 逆天改命扇区选择列表 */

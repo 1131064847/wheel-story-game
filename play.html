@@ -8,7 +8,7 @@
   <meta name="format-detection" content="telephone=no,email=no,address=no" />
   <meta name="theme-color" content="#1a1428" />
   <title>古堡迷踪 · 转盘故事</title>
-  <link rel="stylesheet" href="css/play.css?v=20260905g" />
+  <link rel="stylesheet" href="css/play.css?v=20260905i" />
 </head>
 <body>
 
@@ -30,10 +30,7 @@
     </div>
     <div class="side-drawer-hint">点击即可切换主题</div>
   </div>
-  <button class="sidebar-handle" id="sidebarHandle" aria-label="打开主题切换栏">›</button>
-
-  <!-- 右下角管理员入口小圆点 -->
-  <button class="admin-fab" id="adminFab" aria-label="管理员入口">⚙</button>
+  <button class="sidebar-handle" id="sidebarHandle" title="上下拖动调整位置 · 点击展开" aria-label="打开主题切换栏">›</button>
 
   <!-- 逆天改命：回退上一节点重新指定选择 -->
   <div class="modal-mask" id="fateModal" style="display:none">
@@ -44,26 +41,6 @@
       <div class="modal-btns">
         <button class="modal-btn modal-btn-cancel" id="fateCancelBtn">取消</button>
       </div>
-    </div>
-  </div>
-
-  <!-- 管理员登录弹窗（重新设计：输入框默认空，手动填入） -->
-  <div class="modal-mask" id="adminModal" style="display:none">
-    <div class="modal-card login-card">
-      <button class="modal-close" id="adminCancelBtn" aria-label="关闭">✕</button>
-      <div class="login-logo">♜</div>
-      <div class="modal-title">管理员登录</div>
-      <div class="modal-subtitle">CASTLE KEEPER · 仅限授权管理员</div>
-      <div class="login-field">
-        <span class="login-field-icon">👤</span>
-        <input class="modal-input login-input" id="adminUserInput" type="text" placeholder="请输入账号" autocomplete="off" />
-      </div>
-      <div class="login-field">
-        <span class="login-field-icon">🔑</span>
-        <input class="modal-input login-input" id="adminPassInput" type="password" placeholder="请输入密码" autocomplete="off" />
-      </div>
-      <div class="modal-error" id="adminError"></div>
-      <button class="modal-btn modal-btn-confirm login-btn" id="adminLoginBtn">进入后台 →</button>
     </div>
   </div>
 
@@ -107,16 +84,14 @@
 
 </div>
 
-<script src="js/core/Config.js?v=20260905g"></script>
-<script src="js/core/Utils.js?v=20260905g"></script>
-<script src="js/core/Storage.js?v=20260905g"></script>
-<script src="js/core/AudioFX.js?v=20260905g"></script>
-<script src="js/admin/Auth.js?v=20260905g"></script>
-<script src="js/components/Wheel.js?v=20260905g"></script>
-<script src="js/engine/StoryEngine.js?v=20260905g"></script>
-<script src="js/play/Theme.js?v=20260905g"></script>
-<script src="js/play/AdminEntry.js?v=20260905g"></script>
-<script src="js/play/PlayApp.js?v=20260905g"></script>
+<script src="js/core/Config.js?v=20260905i"></script>
+<script src="js/core/Utils.js?v=20260905i"></script>
+<script src="js/core/Storage.js?v=20260905i"></script>
+<script src="js/core/AudioFX.js?v=20260905i"></script>
+<script src="js/components/Wheel.js?v=20260905i"></script>
+<script src="js/engine/StoryEngine.js?v=20260905i"></script>
+<script src="js/play/Theme.js?v=20260905i"></script>
+<script src="js/play/PlayApp.js?v=20260905i"></script>
 
 </body>
 </html>

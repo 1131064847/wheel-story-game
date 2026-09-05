@@ -87,8 +87,14 @@
           self.closeDrawer();
         });
       }
+      // 把手开合统一由 click 处理（含触屏轻点）；
+      // 拖动结束后由 initHandleDrag 抑制紧随的 click，防止误触
       if (handle) {
         handle.addEventListener('click', function () {
+          if (self._suppressHandleClick) {
+            self._suppressHandleClick = false;
+            return;
+          }
           const drawer = document.getElementById('themeDrawer');
           if (drawer && drawer.classList.contains('open')) {
             self.closeDrawer();
@@ -100,6 +106,73 @@
       if (mask) {
         mask.addEventListener('click', function () { self.closeDrawer(); });
       }
+    },
+
+    /**
+     * 把手可上下拖动：拖动时把手与抽屉垂直位置联动，
+     * 用于在移动端把入口挪离转盘等被遮挡区域（位置仅存内存，刷新复位）
+     */
+    initHandleDrag: function () {
+      const self = this;
+      const handle = document.getElementById('sidebarHandle');
+      const drawer = document.getElementById('themeDrawer');
+      if (!handle || !drawer) return;
+
+      this._handleTop = window.innerHeight / 2; // 与 CSS top:50% 初始一致
+      let dragging = false;
+      let startY = 0;
+      let startTop = 0;
+      let moved = false;
+
+      const half = function () { return handle.offsetHeight / 2; };
+
+      /** 限定中心点范围：把手完整留在视口内，上下留 8px 边距 */
+      const clampTop = function (top) {
+        const min = half() + 8;
+        const max = window.innerHeight - half() - 8;
+        if (max < min) return window.innerHeight / 2;
+        return Math.min(max, Math.max(min, top));
+      };
+
+      const setPos = function (top) {
+        self._handleTop = top;
+        handle.style.top = top + 'px';
+        drawer.style.top = top + 'px';
+      };
+
+      handle.addEventListener('pointerdown', function (e) {
+        dragging = true;
+        moved = false;
+        startY = e.clientY;
+        startTop = self._handleTop;
+        if (handle.setPointerCapture) {
+          try { handle.setPointerCapture(e.pointerId); } catch (err) {}
+        }
+      });
+
+      handle.addEventListener('pointermove', function (e) {
+        if (!dragging) return;
+        const dy = e.clientY - startY;
+        if (!moved && Math.abs(dy) > 6) moved = true;
+        if (moved) setPos(clampTop(startTop + dy));
+      });
+
+      handle.addEventListener('pointerup', function () {
+        if (!dragging) return;
+        dragging = false;
+        // 开合统一由 click 处理；拖动后抑制紧随的 click，防止误触开合
+        self._suppressHandleClick = moved;
+      });
+
+      handle.addEventListener('pointercancel', function () {
+        dragging = false;
+      });
+
+      // 视口变化时重新限位（仅在已拖动过的前提下）
+      window.addEventListener('resize', function () {
+        if (!handle.style.top) return;
+        setPos(clampTop(self._handleTop));
+      });
     },
   };
 
