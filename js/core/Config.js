@@ -20,8 +20,6 @@ const CONFIG = {
     ],
     STROKE_COLOR: '#ffffff',
     STROKE_WIDTH: 2,
-    CENTER_COLOR: '#ffffff',
-    POINTER_COLOR: '#ff4757',
   },
 
   ROOT_NODE_ID: 'root',

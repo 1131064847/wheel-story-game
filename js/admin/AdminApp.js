@@ -25,7 +25,8 @@
     });
 
     $('playDemoBtn').addEventListener('click', function () {
-      window.open('play.html', '_blank');
+      // 进入玩家视角 = 前往主页落地页；带版本参数避免命中旧缓存页
+      window.open('index.html?v=20260905b', '_blank');
     });
 
     $('addNodeBtn').addEventListener('click', onAddNode);

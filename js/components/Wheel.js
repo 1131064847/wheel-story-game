@@ -24,10 +24,14 @@
     this.sectors = options.sectors || [];
     this.minRounds = options.minRounds || CONFIG.WHEEL.ANIMATION_MIN_ROUNDS;
     this.duration = options.duration || CONFIG.WHEEL.ANIMATION_DURATION;
+    // 转动过程中指针每跨过一条扇区分界线触发一次 onTick()，用于播放棘轮音效
+    this.onTick = typeof options.onTick === 'function' ? options.onTick : null;
 
-    this._rotation = 0;
+    this._rotation = 0;          // 转盘旋转角
+    this._pointerRotation = 0;   // 中心指针独立旋转角（不与转盘锁步）
     this._spinning = false;
     this._rafId = null;
+    this._fallbackId = null;     // 动画兜底 interval（rAF 停滞时推进）
 
     this._setupCanvas();
     this.render();
@@ -98,7 +102,8 @@
 
     this._drawOuterRing(center, radius);
     this._drawCenterCircle(center);
-    this._drawPointer(center, radius);
+    // 中心轴指针拥有独立旋转角，不与转盘锁步
+    this._drawCenterPointer(center, radius);
   };
 
   Wheel.prototype._drawEmpty = function (center, radius) {
@@ -126,8 +131,13 @@
     ctx.moveTo(center, center);
     ctx.arc(center, center, radius, startRad, endRad);
     ctx.closePath();
-    ctx.fillStyle = data.color || '#cccccc';
+    const fillStyle = data.color || '#cccccc';
+    ctx.fillStyle = fillStyle;
     ctx.fill();
+    // 同色描边：向轮廓外扩 1px，封闭旋转时相邻扇区因抗锯齿产生的发丝缝隙
+    ctx.strokeStyle = fillStyle;
+    ctx.lineWidth = 2;
+    ctx.stroke();
 
     this._drawSectorText(sectorLayout, center, radius, startRad, endRad);
   };
@@ -223,44 +233,49 @@
 
   Wheel.prototype._drawCenterCircle = function (center) {
     const ctx = this.ctx;
-    const r = 18;
+    const r = 24;
     ctx.save();
     ctx.beginPath();
     ctx.arc(center, center, r, 0, Math.PI * 2);
-    ctx.fillStyle = CONFIG.WHEEL.CENTER_COLOR;
+    ctx.fillStyle = '#ffffff';
     ctx.fill();
     ctx.strokeStyle = '#e0e0e0';
     ctx.lineWidth = 2;
     ctx.stroke();
 
     ctx.beginPath();
-    ctx.arc(center, center, r - 6, 0, Math.PI * 2);
-    ctx.fillStyle = '#f8f8f8';
+    ctx.arc(center, center, r - 13, 0, Math.PI * 2);
+    ctx.fillStyle = '#ececec';
     ctx.fill();
     ctx.restore();
   };
 
-  Wheel.prototype._drawPointer = function (center, radius) {
+  /**
+   * 中心轴指针：白色小三角从中心圆边缘伸出，
+   * 绘制在独立旋转坐标系内（使用 _pointerRotation），
+   * 拥有与转盘不同的旋转轨迹，初始指向顶部
+   */
+  Wheel.prototype._drawCenterPointer = function (center, radius) {
     const ctx = this.ctx;
-    const px = center;
-    const py = center - radius - 2;
+    const hubR = 24;               // 与中心圆半径一致
+    const tipR = radius * 0.2;     // 指针尖端到轴心 = 转盘半径的 1/5
 
     ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(px, py - 14);
-    ctx.lineTo(px - 10, py + 2);
-    ctx.lineTo(px - 5, py + 2);
-    ctx.lineTo(px - 5, py + 10);
-    ctx.lineTo(px + 5, py + 10);
-    ctx.lineTo(px + 5, py + 2);
-    ctx.lineTo(px + 10, py + 2);
-    ctx.closePath();
+    ctx.translate(center, center);
+    ctx.rotate(Utils.degToRad(this._pointerRotation));
 
-    ctx.fillStyle = CONFIG.WHEEL.POINTER_COLOR;
+    ctx.beginPath();
+    ctx.moveTo(0, -tipR);
+    ctx.lineTo(-10, -hubR + 2);
+    ctx.lineTo(10, -hubR + 2);
+    ctx.closePath();
+    ctx.fillStyle = '#ffffff';
     ctx.fill();
-    ctx.strokeStyle = '#ffffff';
+    ctx.strokeStyle = '#c8c8c8';
     ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
     ctx.stroke();
+
     ctx.restore();
   };
 
@@ -269,42 +284,83 @@
     this.render();
   };
 
-  Wheel.prototype._spinToTarget = function (targetRotation, callback) {
+  Wheel.prototype._spinToTarget = function (wheelTarget, pointerTarget, callback) {
     if (this._spinning) return;
 
     const startRotation = this._rotation;
-    const delta = targetRotation - startRotation;
+    const startPointer = this._pointerRotation;
+    const wheelDelta = wheelTarget - startRotation;
+    const pointerDelta = pointerTarget - startPointer;
     const duration = this.duration;
     const startTime = performance.now();
+
+    // 分界线角度表：指针跨过扇区分界线时触发 onTick()（棘轮音效）。
+    // 判定依据是「指针相对转盘的角度」，即 (pointerRotation - rotation)。
+    let tickBounds = null;
+    if (this.onTick) {
+      const layout = this._computeSectorLayout();
+      tickBounds = [];
+      for (let i = 0; i < layout.length; i++) {
+        tickBounds.push(layout[i].start);
+      }
+    }
+
+    const startRel = ((startPointer - startRotation) % 360 + 360) % 360;
+    let relAtTick = startRel;
 
     this._spinning = true;
 
     const self = this;
 
-    function tick(now) {
+    function step(now) {
+      // 幂等保护：完成（或被 reset）后 rAF 与兜底 interval 的残余回调直接跳过
+      if (!self._spinning) return;
+
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
       const eased = easeOutCubic(progress);
 
-      self._rotation = startRotation + delta * eased;
+      // 转盘与指针各自沿自己的目标角插值（同一条缓动曲线，但总角度不同 => 速度不同）
+      self._rotation = startRotation + wheelDelta * eased;
+      self._pointerRotation = startPointer + pointerDelta * eased;
       self.render();
 
-      if (progress < 1) {
-        self._rafId = requestAnimationFrame(tick);
-      } else {
+      if (tickBounds) {
+        const curRel = ((self._pointerRotation - self._rotation) % 360 + 360) % 360;
+        let crossings = 0;
+        for (let i = 0; i < tickBounds.length; i++) {
+          const b = tickBounds[i];
+          crossings += Math.floor((curRel - b) / 360) -
+            Math.floor((relAtTick - b) / 360);
+        }
+        if (crossings > 0) self.onTick(crossings);
+        relAtTick = curRel;
+      }
+
+      if (progress >= 1) {
         self._spinning = false;
-        self._rafId = null;
+
+        // 双通道驱动统一收口：清理 rAF 与兜底 interval
+        if (self._rafId) {
+          cancelAnimationFrame(self._rafId);
+          self._rafId = null;
+        }
+        if (self._fallbackId) {
+          clearInterval(self._fallbackId);
+          self._fallbackId = null;
+        }
 
         const layout = self._computeSectorLayout();
-        const normalizedRot = ((self._rotation % 360) + 360) % 360;
-
-        let pointerAngle = ((-normalizedRot) % 360 + 360) % 360;
+        const wheelNorm = ((self._rotation % 360) + 360) % 360;
+        const pointerNorm = ((self._pointerRotation % 360) + 360) % 360;
+        // 选中扇区 = 指针相对转盘的角度所落入的扇区
+        const relativeAngle = ((pointerNorm - wheelNorm) % 360 + 360) % 360;
 
         let selectedIndex = 0;
         for (let i = 0; i < layout.length; i++) {
           const start = layout[i].start;
           const end = layout[i].end;
-          if (pointerAngle >= start && pointerAngle < end) {
+          if (relativeAngle >= start && relativeAngle < end) {
             selectedIndex = i;
             break;
           }
@@ -317,7 +373,20 @@
       }
     }
 
-    this._rafId = requestAnimationFrame(tick);
+    function rafTick(now) {
+      step(now);
+      // step 可能在本帧内完成并清理 _rafId；未完成才继续排下一帧
+      if (self._spinning) {
+        self._rafId = requestAnimationFrame(rafTick);
+      }
+    }
+
+    // 双通道驱动：rAF 主驱动；标签页隐藏/失焦导致 rAF 停滞时，
+    // 由 setInterval 兜底推进（后台节流下动画跳帧但必然完成并回调结果）
+    this._rafId = requestAnimationFrame(rafTick);
+    this._fallbackId = setInterval(function () {
+      step(performance.now());
+    }, 60);
   };
 
   Wheel.prototype._randomIndex = function () {
@@ -363,17 +432,20 @@
     const layout = this._computeSectorLayout();
     const sectorCenterDeg = layout[index].center;
 
+    // 扇区内随机偏移，避免每次都停在正中心
     const offsetDeg = (Math.random() - 0.5) * (CONFIG.WHEEL.POINTER_OFFSET * 2);
+    const targetCenter = ((sectorCenterDeg + offsetDeg) % 360 + 360) % 360;
 
-    let targetRelative = ((360 - sectorCenterDeg + offsetDeg) % 360 + 360) % 360;
+    // 转盘：从当前角度再转 minRounds 整圈 + 少量随机余量，视觉上不停在原位
+    const wheelJitter = Math.floor(Math.random() * 360);
+    const wheelTarget = this._rotation + this.minRounds * 360 + wheelJitter;
 
-    const currentNorm = ((this._rotation % 360) + 360) % 360;
-    const deltaNorm = ((targetRelative - currentNorm) % 360 + 360) % 360;
+    // 指针：比转盘多转 POINTER_EXTRA_ROUNDS 圈，形成「独立、更快」的旋转轨迹；
+    // 最终指针相对转盘的角度 = targetCenter，确保落入选定扇区。
+    const POINTER_EXTRA_ROUNDS = this.minRounds + 3;
+    const pointerTarget = wheelTarget + targetCenter + POINTER_EXTRA_ROUNDS * 360;
 
-    const extraRounds = Math.max(1, this.minRounds);
-    const targetRotation = this._rotation + extraRounds * 360 + deltaNorm;
-
-    this._spinToTarget(targetRotation, callback);
+    this._spinToTarget(wheelTarget, pointerTarget, callback);
   };
 
   Wheel.prototype.isSpinning = function () {
@@ -386,8 +458,13 @@
       cancelAnimationFrame(this._rafId);
       this._rafId = null;
     }
+    if (this._fallbackId) {
+      clearInterval(this._fallbackId);
+      this._fallbackId = null;
+    }
     this._spinning = false;
     this._rotation = 0;
+    this._pointerRotation = 0;
     this.render();
   };
 
@@ -395,6 +472,10 @@
     if (this._rafId) {
       cancelAnimationFrame(this._rafId);
       this._rafId = null;
+    }
+    if (this._fallbackId) {
+      clearInterval(this._fallbackId);
+      this._fallbackId = null;
     }
     this._spinning = false;
     this.canvas = null;
