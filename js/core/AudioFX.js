@@ -6,7 +6,8 @@
    * - BGM：氛围铺底 + 随机五声音阶拨弦，循环播放
    * - tick：转盘转动棘轮音效（由 Wheel 转动帧跨扇区边界时驱动）
    * - click：按钮点击音效
-   * - 移动端解锁：首次用户交互（touchend/click）时创建并恢复 AudioContext，
+   * - 音频解锁：进入页面先尝试自动起播；被浏览器策略拦截时，
+   *   首次用户手势（按下即触发，pointerdown/touchstart/keydown 等）解锁 AudioContext，
    *   随后自动开启 BGM；解锁前所有发声调用静默跳过
    */
 
@@ -166,27 +167,56 @@
     return bgmMuted;
   }
 
-  /* ---------- 移动端交互解锁 ---------- */
+  /* ---------- 音频解锁 ---------- */
+
+  // 覆盖"按下即解锁"（pointerdown/touchstart/keydown），
+  // 不必等点击完成，首次触碰页面任意位置即启动 BGM
+  const GESTURE_EVENTS = ['touchstart', 'touchend', 'pointerdown', 'click', 'keydown'];
+
+  function unbindUnlock() {
+    GESTURE_EVENTS.forEach(function (ev) {
+      document.removeEventListener(ev, onFirstGesture);
+    });
+  }
 
   function onFirstGesture() {
-    if (!ensureCtx()) return;
+    if (!ensureCtx()) { unbindUnlock(); return; }
     if (ctx.state === 'suspended') {
       try { ctx.resume(); } catch (e) {}
     }
     startBGM();
-    document.removeEventListener('touchend', onFirstGesture);
-    document.removeEventListener('click', onFirstGesture);
+    unbindUnlock();
   }
 
   function bindUnlock() {
-    document.addEventListener('touchend', onFirstGesture, { passive: true });
-    document.addEventListener('click', onFirstGesture);
+    GESTURE_EVENTS.forEach(function (ev) {
+      document.addEventListener(ev, onFirstGesture, { passive: true });
+    });
+  }
+
+  /**
+   * 进入页面即刻尝试自动起播：
+   * - 宽松环境（部分 WebView / 已有媒体参与度的桌面浏览器）直接播放；
+   * - 严格环境（Chrome/Safari 全新页面）此时仍为 suspended，静默失败，
+   *   留给首个手势解锁（浏览器自动播放策略不允许跨页面继承点击激活）。
+   */
+  function tryAutostart() {
+    if (!ensureCtx()) return;
+    try { ctx.resume(); } catch (e) {}
+    if (ctx.state === 'running') {
+      startBGM();
+      unbindUnlock();
+    }
   }
 
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bindUnlock);
+    document.addEventListener('DOMContentLoaded', function () {
+      bindUnlock();
+      tryAutostart();
+    });
   } else {
     bindUnlock();
+    tryAutostart();
   }
 
   global.AudioFX = {
